@@ -1,0 +1,254 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { FileText, Download, CreditCard, ShieldCheck } from 'lucide-react';
+
+export default function App() {
+  // --- STATE MANAGEMENT ---
+  // We store the user's input in these variables. When they change, the preview updates automatically.
+  const [formData, setFormData] = useState({
+    contractType: 'freelance',
+    partyA: '', // e.g., Client
+    partyB: '', // e.g., Freelancer
+    date: '',
+    amount: '',
+    description: ''
+  });
+
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentComplete, setPaymentComplete] = useState(false);
+  
+  // This reference will point to our contract preview so the PDF library knows what to capture.
+  const contractRef = useRef(null);
+
+  // --- SCRIPT LOADING ---
+  // We dynamically load the html2pdf library when the app starts so we can generate PDFs.
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.async = true;
+    document.body.appendChild(script);
+    
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  // --- EVENT HANDLERS ---
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMockPayment = () => {
+    // We simulate a payment processing delay of 1.5 seconds
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setPaymentComplete(true);
+      generatePDF(); // Automatically trigger download after "payment"
+    }, 1500);
+  };
+
+  const generatePDF = () => {
+    if (!window.html2pdf) {
+      alert("PDF library is still loading, please try again in a moment.");
+      return;
+    }
+
+    const element = contractRef.current;
+    const opt = {
+      margin:       1,
+      filename:     `${formData.contractType}-contract.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    // Use the library to generate and save the PDF
+    window.html2pdf().set(opt).from(element).save();
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+      
+      {/* Header Section */}
+      <header className="bg-white border-b border-gray-200 py-6 px-8 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2 text-indigo-600">
+          <FileText size={28} />
+          <h1 className="text-2xl font-bold tracking-tight">MicroContract<span className="text-gray-400 font-light">.gen</span></h1>
+        </div>
+        <div className="text-sm font-medium text-gray-500 flex items-center gap-1">
+          <ShieldCheck size={16} className="text-green-500" />
+          Legally sound, instantly yours.
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+        
+        {/* LEFT COLUMN: Input Form */}
+        <section className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold mb-6 border-b pb-2">1. Contract Details</h2>
+          
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contract Type</label>
+              <select 
+                name="contractType" 
+                value={formData.contractType} 
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded-md p-2.5 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              >
+                <option value="freelance">Freelance Services Agreement</option>
+                <option value="nda">Non-Disclosure Agreement (NDA)</option>
+                <option value="roommate">Roommate Agreement</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client / Party A</label>
+                <input 
+                  type="text" 
+                  name="partyA" 
+                  placeholder="e.g., Acme Corp" 
+                  value={formData.partyA} 
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md p-2.5 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Freelancer / Party B</label>
+                <input 
+                  type="text" 
+                  name="partyB" 
+                  placeholder="e.g., Jane Doe" 
+                  value={formData.partyB} 
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md p-2.5 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
+                <input 
+                  type="date" 
+                  name="date" 
+                  value={formData.date} 
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md p-2.5 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount ($)</label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  placeholder="e.g., 500" 
+                  value={formData.amount} 
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md p-2.5 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scope of Work / Description</label>
+              <textarea 
+                name="description" 
+                rows="3" 
+                placeholder="Describe the services to be provided..."
+                value={formData.description} 
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded-md p-2.5 focus:ring-indigo-500 outline-none"
+              ></textarea>
+            </div>
+          </div>
+
+          <div className="mt-10 pt-6 border-t border-gray-100">
+            <h2 className="text-xl font-semibold mb-4">2. Download</h2>
+            <p className="text-sm text-gray-500 mb-6">Review your document on the right. Once it looks good, generate your legally binding PDF for just $1.</p>
+            
+            <button 
+              onClick={handleMockPayment}
+              disabled={isProcessing}
+              className={`w-full py-3 px-4 rounded-md text-white font-medium flex justify-center items-center gap-2 transition-all ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : paymentComplete ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            >
+              {isProcessing ? (
+                <span>Processing Payment...</span>
+              ) : paymentComplete ? (
+                <>
+                  <Download size={20} />
+                  Download PDF Again
+                </>
+              ) : (
+                <>
+                  <CreditCard size={20} />
+                  Pay $1.00 & Download PDF
+                </>
+              )}
+            </button>
+            <p className="text-xs text-center text-gray-400 mt-3">Payments securely processed by Stripe (Mocked for now)</p>
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN: Document Preview */}
+        <section className="bg-gray-200 p-4 sm:p-8 rounded-xl shadow-inner overflow-hidden flex justify-center items-start">
+          
+          {/* This is the actual "Paper" element that gets converted to PDF */}
+          <div 
+            ref={contractRef}
+            className="bg-white w-full max-w-[8.5in] min-h-[11in] shadow-lg p-10 sm:p-12 text-sm text-gray-800 leading-relaxed font-serif"
+          >
+            <h1 className="text-2xl font-bold text-center mb-8 uppercase tracking-wider">
+              {formData.contractType === 'freelance' ? 'Independent Contractor Agreement' : 
+               formData.contractType === 'nda' ? 'Non-Disclosure Agreement' : 
+               'Roommate Agreement'}
+            </h1>
+            
+            <p className="mb-4">
+              This Agreement is entered into as of <strong>{formData.date || '[DATE]'}</strong>, by and between <strong>{formData.partyA || '[CLIENT NAME]'}</strong> ("Client") and <strong>{formData.partyB || '[FREELANCER NAME]'}</strong> ("Contractor").
+            </p>
+
+            <h2 className="text-lg font-bold mt-6 mb-2">1. Services</h2>
+            <p className="mb-4">
+              The Contractor agrees to perform the following services for the Client: 
+              <br/>
+              <span className="italic">{formData.description || '[Enter scope of work description in the form to the left]'}</span>
+            </p>
+
+            <h2 className="text-lg font-bold mt-6 mb-2">2. Compensation</h2>
+            <p className="mb-4">
+              In exchange for the full, prompt, and satisfactory performance of all Services, the Client shall pay the Contractor a total amount of <strong>${formData.amount || '[AMOUNT]'}</strong>. Payment will be made within 15 days of receiving an invoice.
+            </p>
+
+            <h2 className="text-lg font-bold mt-6 mb-2">3. Independent Contractor Status</h2>
+            <p className="mb-4">
+              The Contractor is an independent contractor. Nothing contained in this Agreement shall be construed to create a partnership, joint venture, or employer-employee relationship between the parties.
+            </p>
+
+            <h2 className="text-lg font-bold mt-6 mb-2">4. Confidentiality</h2>
+            <p className="mb-8">
+              The Contractor will not at any time or in any manner, either directly or indirectly, use for the personal benefit of the Contractor, or divulge, disclose, or communicate in any manner any information that is proprietary to the Client.
+            </p>
+
+            {/* Signature Block */}
+            <div className="grid grid-cols-2 gap-8 mt-16 pt-8 border-t border-gray-300">
+              <div>
+                <div className="border-b border-black w-full mb-2 h-8"></div>
+                <p className="font-bold">Client: {formData.partyA || '[CLIENT NAME]'}</p>
+                <p className="text-gray-500">Date: _______________</p>
+              </div>
+              <div>
+                <div className="border-b border-black w-full mb-2 h-8"></div>
+                <p className="font-bold">Contractor: {formData.partyB || '[FREELANCER NAME]'}</p>
+                <p className="text-gray-500">Date: _______________</p>
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </main>
+    </div>
+  );
+}
